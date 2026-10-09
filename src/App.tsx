@@ -10,9 +10,8 @@ import { DEMO_EVENTS } from './data/demoEvents';
 import { Navbar } from './components/Navbar';
 import { MissionControlTab } from './components/MissionControlTab';
 import { FindingsTab } from './components/FindingsTab';
-import { ExplainTab } from './components/ExplainTab';
+import { SimulationsTab } from './components/SimulationsTab';
 import { DataSourcesTab } from './components/DataSourcesTab';
-import { ModelCardTab } from './components/ModelCardTab';
 import { AlertsTab } from './components/AlertsTab';
 import { MissionReportModal } from './components/MissionReportModal';
 import { Radio, ShieldAlert } from 'lucide-react';
@@ -195,6 +194,7 @@ export default function App() {
         {activeTab === 'mission_control' && (
           <MissionControlTab
             currentEvent={currentEvent}
+            onSelectEvent={(ev) => setCurrentEvent(ev)}
             isMissionRunning={isMissionRunning}
             onRunMission={handleRunMission}
             missionLogs={missionLogs}
@@ -213,16 +213,15 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'explain' && (
-          <ExplainTab currentEvent={currentEvent} />
+        {activeTab === 'simulations' && (
+          <SimulationsTab
+            currentEvent={currentEvent}
+            onOpenReport={() => setIsReportModalOpen(true)}
+          />
         )}
 
         {activeTab === 'sources' && (
           <DataSourcesTab />
-        )}
-
-        {activeTab === 'model_card' && (
-          <ModelCardTab />
         )}
 
         {activeTab === 'alerts' && (

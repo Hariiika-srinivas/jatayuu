@@ -1,0 +1,11 @@
+# Ignore backend files, Python scripts, containers, and data caches during Vercel frontend builds
+backend/
+scripts/
+Dockerfile
+docker-compose.yml
+.python-version
+*.db
+*.sqlite3
+data/cache/
+__pycache__/
+*.pyc

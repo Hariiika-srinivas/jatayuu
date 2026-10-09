@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.database import engine, Base, SessionLocal
 from backend.models.schema import DisasterEvent, AffectedZone, BuildingDamage
-from backend.routers import events, zones, missions, alerts
+from backend.routers import events, zones, missions, alerts, analysis
 
 # Create DB tables
 Base.metadata.create_all(bind=engine)
@@ -10,7 +10,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="JATAYU Disaster Command Center API",
     description="Autonomous AI Virtual Drone for Multi-Satellite Disaster Discovery & Damage Assessment",
-    version="2.0.0",
+    version="2.1.0",
 )
 
 app.add_middleware(
@@ -25,6 +25,7 @@ app.include_router(events.router, prefix="/api")
 app.include_router(zones.router, prefix="/api")
 app.include_router(missions.router, prefix="/api")
 app.include_router(alerts.router, prefix="/api")
+app.include_router(analysis.router, prefix="/api")
 
 @app.get("/api/health")
 def health_check():
@@ -36,4 +37,6 @@ def health_check():
         "tier1_sar_engine": "ACTIVE",
         "tier2_yolo_engine": "ACTIVE",
         "nisar_lband_module": "OPERATIONAL",
+        "prithvi_foundation_model": "LOADED",
+        "analysis_modes": ["LATEST_SATELLITE", "STATIC_UPLOAD", "NORMAL_CONDITIONS_BASELINE", "HISTORICAL_REPLAY"],
     }

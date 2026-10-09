@@ -31,9 +31,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const tabs = [
     { id: 'mission_control', label: 'Mission Control' },
     { id: 'findings', label: 'Findings' },
-    { id: 'explain', label: 'Explain' },
+    { id: 'simulations', label: 'Simulations' },
     { id: 'sources', label: 'Data Sources' },
-    { id: 'model_card', label: 'Model Card' },
     { id: 'alerts', label: 'Alerts' },
   ];
 

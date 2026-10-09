@@ -18,7 +18,7 @@ export interface ActiveLayerItem {
   color: string;
   outlineColor?: string;
   opacity: number;
-  symbolType: 'polygon' | 'dashed-line' | 'marker' | 'pulse-polygon' | 'dots';
+  symbolType: 'polygon' | 'dashed-line' | 'marker' | 'pulse-polygon' | 'dots' | 'gradient';
   status: 'REAL' | 'CACHED' | 'MOCK' | 'N/A';
   isActive: boolean;
   notes?: string;
@@ -32,6 +32,8 @@ interface MapLegendProps {
   showVantor: boolean;
   showDamagedBuildings: boolean;
   showSeverityZones: boolean;
+  showHeatmap?: boolean;
+  heatmapOpacity?: number;
   showOSMInfra?: boolean;
   isVisible: boolean;
   onToggleVisibility: () => void;
@@ -46,6 +48,8 @@ export const MapLegend: React.FC<MapLegendProps> = ({
   showVantor,
   showDamagedBuildings,
   showSeverityZones,
+  showHeatmap = false,
+  heatmapOpacity = 65,
   showOSMInfra = true,
   isVisible,
   onToggleVisibility,
@@ -92,6 +96,18 @@ export const MapLegend: React.FC<MapLegendProps> = ({
       status: 'REAL',
       isActive: showGFM,
       notes: 'Automated flood boundary agreement cross-check',
+    },
+    {
+      id: 'heatmap',
+      name: 'Damage Intensity Heatmap (D3)',
+      category: 'Damage Assessment',
+      color: '#FF1744',
+      outlineColor: '#00E676',
+      opacity: heatmapOpacity,
+      symbolType: 'gradient',
+      status: currentEvent.vantor_coverage ? 'REAL' : 'N/A',
+      isActive: showHeatmap && currentEvent.vantor_coverage,
+      notes: 'D3 Color Interpolation: Green (Low) → Yellow → Red (Destroyed)',
     },
     {
       id: 'buildings',
@@ -249,6 +265,16 @@ export const MapLegend: React.FC<MapLegendProps> = ({
                             className="w-3.5 h-3.5 rounded-xs border border-[#FF1744] bg-[#FF1744]/20 animate-pulse"
                           />
                         </div>
+                      )}
+
+                      {layer.symbolType === 'gradient' && (
+                        <div
+                          className="w-6 h-3.5 rounded-xs border border-[#26262E] shrink-0"
+                          style={{
+                            background: 'linear-gradient(90deg, #00E676 0%, #FFD600 35%, #FF8F00 70%, #FF1744 100%)',
+                          }}
+                          title="D3 Interpolated Intensity: Green (Low) → Yellow → Red (High)"
+                        />
                       )}
 
                       <span className="font-semibold text-white text-[11px] leading-tight">
