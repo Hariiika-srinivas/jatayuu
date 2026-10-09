@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  jatayu-core:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=sqlite:///./jatayu.db
+      - ENVIRONMENT=production
+    volumes:
+      - ./data/cache:/app/data/cache
+    restart: unless-stopped
+
+  jatayu-db:
+    image: postgis/postgis:16-3.4
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: jatayupassword2026
+      POSTGRES_DB: jatayu_gis
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+    profiles:
+      - with-postgis
+
+volumes:
+  postgis_data:

@@ -1,0 +1,163 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #070708;
+  --surface: #0F0F12;
+  --surface-2: #17171C;
+  --border: #26262E;
+  --text: #F4F4F5;
+  --text-muted: #A1A1AA;
+  --brand: #E10600;
+  --brand-hover: #FF2A1F;
+  --brand-deep: #7A0A0A;
+  --brand-glow: rgba(225, 6, 0, 0.35);
+
+  /* Data colors */
+  --sev-critical: #FF1744;
+  --sev-high: #FF8F00;
+  --sev-moderate: #FFD600;
+  --sev-low: #00E676;
+
+  --flood-fill: rgba(0, 184, 212, 0.45);
+  --flood-outline: #4DD0E1;
+  --flood-sentinel: #00E5FF;
+  --flood-nisar: #B388FF;
+  --flood-gfm: #00BFA5;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, .font-heading {
+  font-family: 'Rajdhani', -apple-system, sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.font-display {
+  font-family: 'Orbitron', 'Rajdhani', monospace;
+  letter-spacing: 0.04em;
+}
+
+.font-mono-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Red pulse on CRITICAL zones */
+@keyframes criticalPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 23, 68, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 16px 4px rgba(255, 23, 68, 0.35);
+  }
+}
+
+.pulse-critical {
+  animation: criticalPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Virtual Drone Radar Scanner line sweeping across the map */
+@keyframes droneRadarSweep {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(1000%);
+    opacity: 0.2;
+  }
+}
+
+.drone-scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #E10600, #FF2A1F, #E10600, transparent);
+  box-shadow: 0 0 15px 3px rgba(225, 6, 0, 0.65);
+  pointer-events: none;
+  animation: droneRadarSweep 4s ease-in-out infinite;
+  z-index: 20;
+}
+
+/* Radar pulse ring */
+@keyframes radarRingExpand {
+  0% {
+    transform: scale(0.2);
+    opacity: 0.9;
+  }
+  80% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+.radar-ring {
+  animation: radarRingExpand 2.8s cubic-bezier(0.1, 0.2, 0.3, 1) infinite;
+}
+
+/* Mission progress bar */
+@keyframes missionProgressGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(225, 6, 0, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px rgba(255, 42, 31, 0.8));
+  }
+}
+
+.mission-bar-glow {
+  animation: missionProgressGlow 1.8s ease-in-out infinite;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0F0F12;
+}
+::-webkit-scrollbar-thumb {
+  background: #26262E;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #7A0A0A;
+}
+
+/* MapLibre container overrides */
+.maplibregl-popup-content {
+  background: #0F0F12 !important;
+  color: #F4F4F5 !important;
+  border: 1px solid #26262E !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8) !important;
+  font-family: 'Inter', sans-serif !important;
+}
+.maplibregl-popup-tip {
+  border-top-color: #0F0F12 !important;
+}
+.maplibregl-ctrl-group {
+  background: #0F0F12 !important;
+  border: 1px solid #26262E !important;
+  border-radius: 8px !important;
+}
+.maplibregl-ctrl-group button {
+  border-bottom: 1px solid #26262E !important;
+}
+.maplibregl-ctrl-group button:last-child {
+  border-bottom: none !important;
+}

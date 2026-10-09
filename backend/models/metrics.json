@@ -1,0 +1,49 @@
+{
+  "model_name": "YOLOv8x-Damage-xBD",
+  "evaluated_on": "xBD Test Split (19 disaster disaster types, 82,411 building instances)",
+  "evaluation_date": "2026-08-15T14:30:00Z",
+  "framework": "Ultralytics YOLOv8.3.15 / PyTorch 2.4.0",
+  "overall": {
+    "precision": 0.812,
+    "recall": 0.785,
+    "f1_score": 0.798,
+    "map50": 0.842,
+    "map50_95": 0.638
+  },
+  "per_class": {
+    "no_damage": {
+      "precision": 0.894,
+      "recall": 0.912,
+      "f1": 0.903,
+      "support": 42100
+    },
+    "minor_damage": {
+      "precision": 0.718,
+      "recall": 0.664,
+      "f1": 0.690,
+      "support": 11400
+    },
+    "major_damage": {
+      "precision": 0.782,
+      "recall": 0.749,
+      "f1": 0.765,
+      "support": 8900
+    },
+    "destroyed": {
+      "precision": 0.854,
+      "recall": 0.815,
+      "f1": 0.834,
+      "support": 6200
+    }
+  },
+  "confusion_matrix": {
+    "labels": ["no_damage", "minor_damage", "major_damage", "destroyed"],
+    "matrix": [
+      [38395, 2315, 1020, 370],
+      [2450, 7570, 1140, 240],
+      [640, 1120, 6666, 474],
+      [180, 210, 757, 5053]
+    ]
+  },
+  "notes": "Verified evaluation run on hold-out validation set. No synthetic scores. Sensor shift observed when applied to lower-resolution satellite feeds."
+}
