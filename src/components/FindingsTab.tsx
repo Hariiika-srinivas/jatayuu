@@ -306,6 +306,12 @@ export const FindingsTab: React.FC<FindingsTabProps> = ({
                         src={bldg.crop_image_url}
                         alt={`Building crop ${bldg.building_id}`}
                         referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          if (!target.src.includes('/assets/images/crop_bldg_major')) {
+                            target.src = '/assets/images/crop_bldg_major_1791485407543.jpg';
+                          }
+                        }}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute top-2 left-2 bg-[#0F0F12]/85 backdrop-blur-xs px-2 py-0.5 rounded text-[10px] font-mono-code text-white border border-[#26262E]">
@@ -502,6 +508,12 @@ export const FindingsTab: React.FC<FindingsTabProps> = ({
                   src={selectedBuildingForModal.crop_image_url}
                   alt="High-resolution building damage crop"
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    const target = e.currentTarget as HTMLImageElement;
+                    if (!target.src.includes('/assets/images/crop_bldg_major')) {
+                      target.src = '/assets/images/crop_bldg_major_1791485407543.jpg';
+                    }
+                  }}
                   className="w-full h-full object-cover"
                 />
               </div>

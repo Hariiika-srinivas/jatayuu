@@ -1,10 +1,15 @@
 import { AffectedZone, DamagedBuilding, DataSourceMeta, DisasterEvent } from '../types';
+import satPreImg from '../assets/images/sat_nepal_pre_1791485339536.jpg';
+import satPostImg from '../assets/images/sat_nepal_post_1791485363207.jpg';
+import cropDestroyedImg from '../assets/images/crop_bldg_destroyed_1791485383075.jpg';
+import cropMajorImg from '../assets/images/crop_bldg_major_1791485407543.jpg';
+import cropMinorImg from '../assets/images/crop_bldg_minor_1791485433324.jpg';
 
-export const SAT_PRE_IMAGE = '/src/assets/images/sat_nepal_pre_1791485339536.jpg';
-export const SAT_POST_IMAGE = '/src/assets/images/sat_nepal_post_1791485363207.jpg';
-export const CROP_DESTROYED = '/src/assets/images/crop_bldg_destroyed_1791485383075.jpg';
-export const CROP_MAJOR = '/src/assets/images/crop_bldg_major_1791485407543.jpg';
-export const CROP_MINOR = '/src/assets/images/crop_bldg_minor_1791485433324.jpg';
+export const SAT_PRE_IMAGE = satPreImg;
+export const SAT_POST_IMAGE = satPostImg;
+export const CROP_DESTROYED = cropDestroyedImg;
+export const CROP_MAJOR = cropMajorImg;
+export const CROP_MINOR = cropMinorImg;
 
 export const DEMO_EVENTS: DisasterEvent[] = [
   // 1. Mode A: Latest Available Satellite Observation (Jammu & Kashmir)

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Satellite,
   Upload,
@@ -12,6 +12,7 @@ import {
   ExternalLink,
   ShieldCheck,
   Flame,
+  Globe,
 } from 'lucide-react';
 import { AnalysisMode, DisasterEvent } from '../types';
 import { DEMO_EVENTS } from '../data/demoEvents';
@@ -21,6 +22,10 @@ interface AnalysisModeSelectorProps {
   onSelectEvent: (event: DisasterEvent) => void;
   onOpenUploadModal: () => void;
   onOpenPrithviModal: () => void;
+  selectedDate?: string;
+  onDateChange?: (date: string) => void;
+  satelliteSource?: 'NASA_GIBS' | 'EARTH_OBSERVATION';
+  onSourceChange?: (source: 'NASA_GIBS' | 'EARTH_OBSERVATION') => void;
 }
 
 export const AnalysisModeSelector: React.FC<AnalysisModeSelectorProps> = ({
@@ -28,10 +33,30 @@ export const AnalysisModeSelector: React.FC<AnalysisModeSelectorProps> = ({
   onSelectEvent,
   onOpenUploadModal,
   onOpenPrithviModal,
+  selectedDate: propSelectedDate,
+  onDateChange,
+  satelliteSource = 'EARTH_OBSERVATION',
+  onSourceChange,
 }) => {
-  const [selectedDate, setSelectedDate] = useState<string>('2026-10-08');
+  const initialDate = propSelectedDate || currentEvent.onset_date?.substring(0, 10) || '2026-10-08';
+  const [localDate, setLocalDate] = useState<string>(initialDate);
   const [isQueryingData, setIsQueryingData] = useState(false);
   const [querySuccessNotice, setQuerySuccessNotice] = useState<string | null>(null);
+
+  // Sync date when event changes
+  useEffect(() => {
+    if (currentEvent.onset_date) {
+      const d = currentEvent.onset_date.substring(0, 10);
+      setLocalDate(d);
+      if (onDateChange) onDateChange(d);
+    }
+  }, [currentEvent.id]);
+
+  useEffect(() => {
+    if (propSelectedDate && propSelectedDate !== localDate) {
+      setLocalDate(propSelectedDate);
+    }
+  }, [propSelectedDate]);
 
   // Switch to specific mode events
   const handleSelectMode = (mode: AnalysisMode) => {
@@ -47,19 +72,37 @@ export const AnalysisModeSelector: React.FC<AnalysisModeSelectorProps> = ({
 
     if (targetEvent) {
       onSelectEvent(targetEvent);
+      if (targetEvent.onset_date) {
+        const d = targetEvent.onset_date.substring(0, 10);
+        setLocalDate(d);
+        if (onDateChange) onDateChange(d);
+      }
     }
   };
 
-  // Simulate querying latest observation for selected date
+  // Query latest observation for selected date
   const handleQueryLatest = () => {
     setIsQueryingData(true);
     setQuerySuccessNotice(null);
 
+    if (onDateChange) {
+      onDateChange(localDate);
+    }
+
     setTimeout(() => {
       setIsQueryingData(false);
-      setQuerySuccessNotice(`Observation updated for ${selectedDate} via NASA GIBS & Copernicus CDSE.`);
+      const sourceLabel = satelliteSource === 'NASA_GIBS' ? 'NASA GIBS WMS (VIIRS/MODIS)' : 'Earth Observation Satellite (TrueColor)';
+      setQuerySuccessNotice(`Observation feed loaded for ${localDate} via ${sourceLabel}.`);
       setTimeout(() => setQuerySuccessNotice(null), 4000);
-    }, 800);
+    }, 700);
+  };
+
+  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setLocalDate(val);
+    if (onDateChange) {
+      onDateChange(val);
+    }
   };
 
   const currentCategory = currentEvent.event_category || 'LATEST_OBSERVATION';
@@ -172,13 +215,42 @@ export const AnalysisModeSelector: React.FC<AnalysisModeSelectorProps> = ({
         </div>
 
         {/* Date Selector & Refresh Action */}
-        <div className="flex items-center gap-1.5 justify-end">
+        <div className="flex flex-wrap items-center gap-1.5 justify-end">
+          {onSourceChange && (
+            <div className="flex items-center bg-[#0F0F12] border border-[#26262E] rounded-lg p-0.5 text-[10px] font-mono-code">
+              <button
+                type="button"
+                onClick={() => onSourceChange('EARTH_OBSERVATION')}
+                title="High-Resolution True-Color Optical Earth Observation Sat Frame"
+                className={`px-2 py-0.5 rounded transition-all ${
+                  satelliteSource === 'EARTH_OBSERVATION'
+                    ? 'bg-[#E10600] text-white font-bold shadow-[0_0_8px_rgba(225,6,0,0.4)]'
+                    : 'text-[#A1A1AA] hover:text-white'
+                }`}
+              >
+                High-Res Sat
+              </button>
+              <button
+                type="button"
+                onClick={() => onSourceChange('NASA_GIBS')}
+                title="NASA GIBS WMS (VIIRS 375m & MODIS 250m Daily TrueColor Orbit Pass)"
+                className={`px-2 py-0.5 rounded transition-all ${
+                  satelliteSource === 'NASA_GIBS'
+                    ? 'bg-[#4DD0E1] text-[#09090C] font-bold shadow-[0_0_8px_rgba(77,208,225,0.4)]'
+                    : 'text-[#A1A1AA] hover:text-white'
+                }`}
+              >
+                NASA GIBS
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center gap-1 bg-[#0F0F12] border border-[#26262E] rounded-lg px-2 py-1 text-xs">
             <Calendar className="w-3.5 h-3.5 text-[#A1A1AA]" />
             <input
               type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              value={localDate}
+              onChange={handleDateInputChange}
               className="bg-transparent text-white text-[11px] font-mono-code focus:outline-none cursor-pointer"
             />
           </div>
@@ -190,7 +262,7 @@ export const AnalysisModeSelector: React.FC<AnalysisModeSelectorProps> = ({
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#26262E] hover:bg-[#E10600] text-white text-[11px] font-semibold transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isQueryingData ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Query</span>
+            <span className="hidden sm:inline">Query Pass</span>
           </button>
         </div>
       </div>

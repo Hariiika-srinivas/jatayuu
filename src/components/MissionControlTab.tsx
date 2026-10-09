@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { AffectedZone, DamagedBuilding, DisasterEvent, MissionStep, StaticUploadResult } from '../types';
 import { DEMO_AFFECTED_ZONES, DEMO_DAMAGED_BUILDINGS, SAT_PRE_IMAGE, SAT_POST_IMAGE } from '../data/demoEvents';
+import { resolveSatelliteImagery, SatelliteSourceMode, SatelliteImageryMeta } from '../services/satelliteImagery';
 import { MapLegend } from './MapLegend';
 import { AnalysisModeSelector } from './AnalysisModeSelector';
 import { SharedPipelineFlow } from './SharedPipelineFlow';
@@ -29,6 +30,10 @@ import {
   ShieldCheck,
   Upload,
   Cpu,
+  Satellite,
+  Globe,
+  RefreshCw,
+  AlertTriangle,
 } from 'lucide-react';
 
 // D3 Interpolated Color Scale from Green (Low = 0.0) -> Yellow (0.35) -> Orange (0.70) -> Red (High/Destroyed = 1.0)
@@ -110,6 +115,65 @@ export const MissionControlTab: React.FC<MissionControlTabProps> = ({
   // Buildings for current event
   const eventBuildings = DEMO_DAMAGED_BUILDINGS.filter((b) => b.event_id === currentEvent.id);
 
+  // Satellite Imagery Feed State
+  const initialDate = currentEvent.onset_date?.substring(0, 10) || '2026-10-08';
+  const [selectedObservationDate, setSelectedObservationDate] = useState<string>(initialDate);
+  const [satelliteSource, setSatelliteSource] = useState<SatelliteSourceMode>('EARTH_OBSERVATION');
+  const [currentSatelliteUrl, setCurrentSatelliteUrl] = useState<string>('');
+  const [isSatelliteLoading, setIsSatelliteLoading] = useState<boolean>(true);
+  const [hasSatelliteFailed, setHasSatelliteFailed] = useState<boolean>(false);
+  const [satelliteMeta, setSatelliteMeta] = useState<SatelliteImageryMeta | null>(null);
+  const [loadFallbackAttempted, setLoadFallbackAttempted] = useState<boolean>(false);
+
+  // Sync date when event changes
+  useEffect(() => {
+    if (currentEvent.onset_date) {
+      const d = currentEvent.onset_date.substring(0, 10);
+      setSelectedObservationDate(d);
+    }
+  }, [currentEvent.id]);
+
+  // Compute and load satellite URL whenever event, date, or source changes
+  useEffect(() => {
+    const meta = resolveSatelliteImagery(
+      currentEvent.center_lat,
+      currentEvent.center_lon,
+      selectedObservationDate,
+      satelliteSource
+    );
+    setSatelliteMeta(meta);
+    setCurrentSatelliteUrl(meta.url);
+    setIsSatelliteLoading(true);
+    setHasSatelliteFailed(false);
+    setLoadFallbackAttempted(false);
+  }, [currentEvent.id, currentEvent.center_lat, currentEvent.center_lon, selectedObservationDate, satelliteSource]);
+
+  const handleSatelliteLoadSuccess = () => {
+    setIsSatelliteLoading(false);
+    setHasSatelliteFailed(false);
+  };
+
+  const handleSatelliteLoadError = () => {
+    if (!loadFallbackAttempted && satelliteMeta) {
+      setLoadFallbackAttempted(true);
+      setCurrentSatelliteUrl(satelliteMeta.fallbackUrl);
+    } else {
+      setIsSatelliteLoading(false);
+      setHasSatelliteFailed(true);
+      setCurrentSatelliteUrl(SAT_POST_IMAGE);
+    }
+  };
+
+  const handleRetrySatelliteFeed = () => {
+    if (satelliteMeta) {
+      setIsSatelliteLoading(true);
+      setHasSatelliteFailed(false);
+      setLoadFallbackAttempted(false);
+      const retryUrl = `${satelliteMeta.url}&_retry=${Date.now()}`;
+      setCurrentSatelliteUrl(retryUrl);
+    }
+  };
+
   // Update selected zone when event changes
   useEffect(() => {
     if (eventZones.length > 0) {
@@ -172,6 +236,10 @@ export const MissionControlTab: React.FC<MissionControlTabProps> = ({
         onSelectEvent={onSelectEvent}
         onOpenUploadModal={() => setIsUploadModalOpen(true)}
         onOpenPrithviModal={() => setIsPrithviModalOpen(true)}
+        selectedDate={selectedObservationDate}
+        onDateChange={setSelectedObservationDate}
+        satelliteSource={satelliteSource}
+        onSourceChange={setSatelliteSource}
       />
 
       {/* 2. Shared 10-Stage Pipeline Flow */}
@@ -199,6 +267,36 @@ export const MissionControlTab: React.FC<MissionControlTabProps> = ({
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Satellite Feed Selector */}
+              <div className="hidden sm:flex items-center bg-[#0F0F12] border border-[#26262E] rounded-lg p-0.5 text-[11px] font-mono-code">
+                <button
+                  type="button"
+                  onClick={() => setSatelliteSource('EARTH_OBSERVATION')}
+                  title="Switch to High-Resolution Optical Earth Observation Frame"
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded transition-all ${
+                    satelliteSource === 'EARTH_OBSERVATION'
+                      ? 'bg-[#E10600] text-white font-bold shadow-[0_0_8px_rgba(225,6,0,0.4)]'
+                      : 'text-[#A1A1AA] hover:text-white'
+                  }`}
+                >
+                  <Globe className="w-3 h-3" />
+                  <span>High-Res Sat</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSatelliteSource('NASA_GIBS')}
+                  title="Switch to NASA GIBS Daily Orbit Pass (VIIRS/MODIS)"
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded transition-all ${
+                    satelliteSource === 'NASA_GIBS'
+                      ? 'bg-[#4DD0E1] text-[#09090C] font-bold shadow-[0_0_8px_rgba(77,208,225,0.4)]'
+                      : 'text-[#A1A1AA] hover:text-white'
+                  }`}
+                >
+                  <Satellite className="w-3 h-3" />
+                  <span>NASA GIBS</span>
+                </button>
+              </div>
+
               {/* Map Legend Toggle */}
               <button
                 onClick={() => setIsLegendVisible(!isLegendVisible)}
@@ -285,6 +383,9 @@ export const MissionControlTab: React.FC<MissionControlTabProps> = ({
                   src={SAT_PRE_IMAGE}
                   alt="Pre-disaster optical"
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = '/assets/images/sat_nepal_pre_1791485339536.jpg';
+                  }}
                   className="absolute inset-0 w-full h-full object-cover"
                 />
 
@@ -297,6 +398,9 @@ export const MissionControlTab: React.FC<MissionControlTabProps> = ({
                     src={SAT_POST_IMAGE}
                     alt="Post-disaster optical flood"
                     referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/assets/images/sat_nepal_post_1791485363207.jpg';
+                    }}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 </div>
@@ -331,16 +435,73 @@ export const MissionControlTab: React.FC<MissionControlTabProps> = ({
               </div>
             ) : (
               /* Standard Map Canvas */
-              <div className="relative w-full h-full bg-[#09090C] flex items-center justify-center">
+              <div className="relative w-full h-full bg-[#09090C] flex items-center justify-center overflow-hidden">
                 {/* Base Satellite Imagery */}
                 <img
-                  src={SAT_POST_IMAGE}
-                  alt="Earth Observation Satellite Frame"
+                  key={currentSatelliteUrl || SAT_POST_IMAGE}
+                  src={currentSatelliteUrl || SAT_POST_IMAGE}
+                  alt={`Earth Observation Satellite Frame - ${currentEvent.location_name}`}
                   referrerPolicy="no-referrer"
-                  className={`w-full h-full object-cover filter contrast-125 ${
-                    currentEvent.is_normal_no_flood ? 'opacity-85 brightness-95' : 'opacity-75'
+                  onLoad={handleSatelliteLoadSuccess}
+                  onError={handleSatelliteLoadError}
+                  className={`w-full h-full object-cover filter contrast-125 transition-opacity duration-300 ${
+                    isSatelliteLoading
+                      ? 'opacity-40 blur-[1px]'
+                      : currentEvent.is_normal_no_flood
+                      ? 'opacity-90 brightness-95'
+                      : 'opacity-80'
                   }`}
                 />
+
+                {/* Satellite Ingestion Streaming Indicator */}
+                {isSatelliteLoading && (
+                  <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-[#0F0F12]/90 border border-[#26262E] px-3 py-1.5 rounded-lg text-xs font-mono-code text-[#4DD0E1] shadow-md pointer-events-none">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#4DD0E1]" />
+                    <span>
+                      Acquiring {satelliteSource === 'NASA_GIBS' ? 'NASA GIBS (VIIRS 375m / MODIS 250m)' : 'Earth Observation (High-Res Optical)'} frame...
+                    </span>
+                  </div>
+                )}
+
+                {/* Satellite Feed Offline Clean Fallback Notice Banner */}
+                {hasSatelliteFailed && (
+                  <div className="absolute top-4 left-4 z-20 flex items-center gap-3 bg-[#17171C]/95 border border-[#FF9800]/50 px-3.5 py-2 rounded-lg text-xs font-mono-code text-[#FFB74D] shadow-xl">
+                    <AlertTriangle className="w-4 h-4 text-[#FF9800] shrink-0" />
+                    <div>
+                      <div className="font-semibold text-white">Satellite Feed Service Notice</div>
+                      <div className="text-[11px] text-[#A1A1AA]">
+                        Live {satelliteSource} feed unreachable. Displaying calibrated baseline optical observation for {currentEvent.location_name}.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRetrySatelliteFeed}
+                      className="ml-1 px-2.5 py-1 bg-[#26262E] hover:bg-[#E10600] text-white rounded text-[11px] font-semibold transition-colors shrink-0 cursor-pointer"
+                    >
+                      Retry Feed
+                    </button>
+                  </div>
+                )}
+
+                {/* Live Satellite Feed Metadata HUD */}
+                <div className="absolute bottom-2 left-2 z-20 bg-[#0F0F12]/85 border border-[#26262E] px-2.5 py-1 rounded text-[10px] font-mono-code text-[#A1A1AA] flex items-center gap-2 pointer-events-none backdrop-blur-sm">
+                  <span className={`w-1.5 h-1.5 rounded-full ${hasSatelliteFailed ? 'bg-[#FF9800]' : 'bg-[#00E676] animate-pulse'}`} />
+                  <span className="text-[#F4F4F5] font-semibold">
+                    {hasSatelliteFailed
+                      ? 'OFFLINE (BASELINE OPTICAL)'
+                      : satelliteSource === 'NASA_GIBS'
+                      ? 'NASA GIBS WMS (VIIRS/MODIS)'
+                      : 'EARTH OBSERVATION (TRUECOLOR)'}
+                  </span>
+                  <span>·</span>
+                  <span>AOI: {currentEvent.center_lat.toFixed(3)}°N, {currentEvent.center_lon.toFixed(3)}°E</span>
+                  {selectedObservationDate && (
+                    <>
+                      <span>·</span>
+                      <span>DATE: {selectedObservationDate}</span>
+                    </>
+                  )}
+                </div>
 
                 {/* SVG Vector Overlays */}
                 <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1000 700">
