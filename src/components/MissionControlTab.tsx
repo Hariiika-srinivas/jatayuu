@@ -122,6 +122,7 @@ export const MissionControlTab: React.FC<MissionControlTabProps> = ({
   const [currentSatelliteUrl, setCurrentSatelliteUrl] = useState<string>('');
   const [isSatelliteLoading, setIsSatelliteLoading] = useState<boolean>(true);
   const [hasSatelliteFailed, setHasSatelliteFailed] = useState<boolean>(false);
+  const [isOfflineGraphicMode, setIsOfflineGraphicMode] = useState<boolean>(false);
   const [satelliteMeta, setSatelliteMeta] = useState<SatelliteImageryMeta | null>(null);
   const [loadFallbackAttempted, setLoadFallbackAttempted] = useState<boolean>(false);
 
@@ -145,22 +146,27 @@ export const MissionControlTab: React.FC<MissionControlTabProps> = ({
     setCurrentSatelliteUrl(meta.url);
     setIsSatelliteLoading(true);
     setHasSatelliteFailed(false);
+    setIsOfflineGraphicMode(false);
     setLoadFallbackAttempted(false);
   }, [currentEvent.id, currentEvent.center_lat, currentEvent.center_lon, selectedObservationDate, satelliteSource]);
 
   const handleSatelliteLoadSuccess = () => {
     setIsSatelliteLoading(false);
     setHasSatelliteFailed(false);
+    setIsOfflineGraphicMode(false);
   };
 
   const handleSatelliteLoadError = () => {
     if (!loadFallbackAttempted && satelliteMeta) {
       setLoadFallbackAttempted(true);
       setCurrentSatelliteUrl(satelliteMeta.fallbackUrl);
-    } else {
+    } else if (!hasSatelliteFailed) {
       setIsSatelliteLoading(false);
       setHasSatelliteFailed(true);
       setCurrentSatelliteUrl(SAT_POST_IMAGE);
+    } else {
+      setIsSatelliteLoading(false);
+      setIsOfflineGraphicMode(true);
     }
   };
 
@@ -168,6 +174,7 @@ export const MissionControlTab: React.FC<MissionControlTabProps> = ({
     if (satelliteMeta) {
       setIsSatelliteLoading(true);
       setHasSatelliteFailed(false);
+      setIsOfflineGraphicMode(false);
       setLoadFallbackAttempted(false);
       const retryUrl = `${satelliteMeta.url}&_retry=${Date.now()}`;
       setCurrentSatelliteUrl(retryUrl);
@@ -436,22 +443,62 @@ export const MissionControlTab: React.FC<MissionControlTabProps> = ({
             ) : (
               /* Standard Map Canvas */
               <div className="relative w-full h-full bg-[#09090C] flex items-center justify-center overflow-hidden">
-                {/* Base Satellite Imagery */}
-                <img
-                  key={currentSatelliteUrl || SAT_POST_IMAGE}
-                  src={currentSatelliteUrl || SAT_POST_IMAGE}
-                  alt={`Earth Observation Satellite Frame - ${currentEvent.location_name}`}
-                  referrerPolicy="no-referrer"
-                  onLoad={handleSatelliteLoadSuccess}
-                  onError={handleSatelliteLoadError}
-                  className={`w-full h-full object-cover filter contrast-125 transition-opacity duration-300 ${
-                    isSatelliteLoading
-                      ? 'opacity-40 blur-[1px]'
-                      : currentEvent.is_normal_no_flood
-                      ? 'opacity-90 brightness-95'
-                      : 'opacity-80'
-                  }`}
-                />
+                {/* Base Satellite Imagery or Tactical Offline Fallback */}
+                {isOfflineGraphicMode ? (
+                  <div className="absolute inset-0 bg-[#09090C] flex flex-col items-center justify-center p-6 text-center z-10">
+                    <div className="w-14 h-14 rounded-full bg-[#17171C] border border-[#FF9800]/50 flex items-center justify-center mb-3 shadow-[0_0_24px_rgba(255,152,0,0.25)]">
+                      <Satellite className="w-7 h-7 text-[#FF9800] animate-pulse" />
+                    </div>
+                    <span className="text-xs font-bold text-white uppercase tracking-wider font-display">
+                      SATELLITE TELEMETRY FEED TEMPORARILY UNREACHABLE
+                    </span>
+                    <p className="text-[11px] text-[#A1A1AA] max-w-sm mt-1 font-mono-code">
+                      Observation service for {currentEvent.location_name} ({currentEvent.center_lat.toFixed(3)}°N, {currentEvent.center_lon.toFixed(3)}°E) encountered a network or rate limit.
+                    </p>
+                    <div className="flex items-center gap-2 mt-4">
+                      <button
+                        type="button"
+                        onClick={handleRetrySatelliteFeed}
+                        className="px-3 py-1.5 rounded-lg bg-[#E10600] text-white text-xs font-semibold hover:bg-[#B70500] transition-colors flex items-center gap-1.5 cursor-pointer shadow-lg"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Retry Satellite Feed</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSatelliteSource(satelliteSource === 'NASA_GIBS' ? 'EARTH_OBSERVATION' : 'NASA_GIBS');
+                          setIsOfflineGraphicMode(false);
+                          setIsSatelliteLoading(true);
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-[#17171C] border border-[#26262E] text-[#4DD0E1] text-xs font-semibold hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Globe className="w-3.5 h-3.5" />
+                        <span>Switch to {satelliteSource === 'NASA_GIBS' ? 'High-Res Sat' : 'NASA GIBS'}</span>
+                      </button>
+                    </div>
+                    <span className="text-[10px] text-[#71717A] mt-3 font-mono-code">
+                      GIS layers, flood risk polygons, and building damage coordinates remain fully active.
+                    </span>
+                  </div>
+                ) : (
+                  <img
+                    key={currentSatelliteUrl || SAT_POST_IMAGE}
+                    src={currentSatelliteUrl || SAT_POST_IMAGE}
+                    alt={`Earth Observation Satellite Frame - ${currentEvent.location_name}`}
+                    crossOrigin="anonymous"
+                    referrerPolicy="no-referrer"
+                    onLoad={handleSatelliteLoadSuccess}
+                    onError={handleSatelliteLoadError}
+                    className={`w-full h-full object-cover filter contrast-125 transition-opacity duration-300 ${
+                      isSatelliteLoading
+                        ? 'opacity-40 blur-[1px]'
+                        : currentEvent.is_normal_no_flood
+                        ? 'opacity-90 brightness-95'
+                        : 'opacity-80'
+                    }`}
+                  />
+                )}
 
                 {/* Satellite Ingestion Streaming Indicator */}
                 {isSatelliteLoading && (

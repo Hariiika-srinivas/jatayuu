@@ -49,26 +49,29 @@ export function calculateAoiBounds(lat: number, lon: number, radiusDeg = 0.30): 
 
 /**
  * Formats a date string or Date object into YYYY-MM-DD for NASA GIBS WMS
- * Clamps future dates to today's date so NASA GIBS returns valid observation imagery
+ * Clamps future or current day dates to 1-2 days ago so NASA GIBS returns full processed observation mosaics
  */
 export function formatGibsDate(dateInput?: string): string {
   const now = new Date();
+  // Safe latest observation pass is 1-2 days prior to guarantee full orbit stitching
+  const safeLatest = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const safeLatestStr = safeLatest.toISOString().split('T')[0];
   const todayStr = now.toISOString().split('T')[0];
 
-  if (!dateInput) return todayStr;
+  if (!dateInput) return safeLatestStr;
 
   try {
     const parsed = new Date(dateInput);
-    if (isNaN(parsed.getTime())) return todayStr;
+    if (isNaN(parsed.getTime())) return safeLatestStr;
 
     const parsedStr = parsed.toISOString().split('T')[0];
-    // If the date is in the future, clamp to recent real observation date
-    if (parsedStr > todayStr) {
-      return todayStr;
+    // If the date is today or future, clamp to recent completed observation pass
+    if (parsedStr >= todayStr) {
+      return safeLatestStr;
     }
     return parsedStr;
   } catch {
-    return todayStr;
+    return safeLatestStr;
   }
 }
 
